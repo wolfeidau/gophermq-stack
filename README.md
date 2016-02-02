@@ -29,6 +29,7 @@ github_client_secret: xxx
 influxdb_hostname: iot.example.com
 mosquitto_hostname: mqtt.example.com
 grafana_hostname: graphs.example.com
+letsencrypt_recovery_email: me@example.com
 ```
 
 Dependencies
@@ -58,7 +59,7 @@ Including an example of how to use your role (for instance, with variables passe
     influxdb_hostname: iot.example.com
     mosquitto_hostname: mqtt.example.com
     grafana_hostname: graphs.example.com
-
+    letsencrypt_recovery_email: me@example.com
 ```
 
 License

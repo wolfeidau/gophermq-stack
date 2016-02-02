@@ -32,7 +32,7 @@
       VIRTUAL_HOST: "{{ influxdb_hostname }}"
       VIRTUAL_PORT: "8086"
       LETSENCRYPT_HOST: "{{ influxdb_hostname }}"
-      LETSENCRYPT_EMAIL: "mark@wolfe.id.au"
+      LETSENCRYPT_EMAIL: "{{ letsencrypt_recovery_email }}"
 
 - name: nginx-proxy
   docker:
@@ -94,7 +94,7 @@
       VIRTUAL_HOST: "{{ mosquitto_hostname }}"
       VIRTUAL_PORT: "9001"
       LETSENCRYPT_HOST: "{{ mosquitto_hostname }}"
-      LETSENCRYPT_EMAIL: "mark@wolfe.id.au"
+      LETSENCRYPT_EMAIL: "{{ letsencrypt_recovery_email }}"
 
 - name: grafana
   docker:
@@ -110,7 +110,7 @@
       VIRTUAL_HOST: "{{ grafana_hostname }}"
       VIRTUAL_PORT: "3000"
       LETSENCRYPT_HOST: "{{ grafana_hostname }}"
-      LETSENCRYPT_EMAIL: "mark@wolfe.id.au"
+      LETSENCRYPT_EMAIL: "{{ letsencrypt_recovery_email }}"
       GF_SERVER_ROOT_URL: "https://{{ grafana_hostname }}"
       GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_pass }}"
       GF_USERS_ALLOW_SIGN_UP: false
