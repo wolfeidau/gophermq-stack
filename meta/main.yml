@@ -10,7 +10,7 @@ galaxy_info:
     - monitoring
     - networking
   company: "Mark Wolfe"
-  description: ~
+  description: "Ties together influxdb, letsencrypt, mosquiotto and grafana using Ansible and Docker."
   license: BSD
   min_ansible_version: 1.9
   platforms:
