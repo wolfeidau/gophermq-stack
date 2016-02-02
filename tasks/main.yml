@@ -1,0 +1,141 @@
+---
+# tasks file for gophermq-stack
+
+- name: Install ops packages
+  apt: state=installed pkg={{ item }}
+  with_items: ubuntu_ops_packages
+
+- name: Setup ufw
+  ufw: state=enabled policy=deny
+
+- name: Allow tcp traffic
+  ufw: rule=allow port={{ item }} proto=tcp
+  with_items: ufw_open_tcp_ports
+
+- name: Adjust APT update intervals
+  copy: src=apt_periodic dest=/etc/apt/apt.conf.d/10periodic
+
+- name: influxdb
+  docker:
+    name: influxdb_1
+    image: wolfeidau/influxdb:latest
+    state: started
+    restart_policy: always
+    expose:
+      - 8086
+    volumes:
+      - /data:/data
+    env:
+      PRE_CREATE_DB: "iotdb"
+      ADMIN_USER: "root"
+      INFLUXDB_INIT_PWD: "{{ influxdb_pass }}"
+      VIRTUAL_HOST: "{{ influxdb_hostname }}"
+      VIRTUAL_PORT: "8086"
+      LETSENCRYPT_HOST: "{{ influxdb_hostname }}"
+      LETSENCRYPT_EMAIL: "mark@wolfe.id.au"
+
+- name: nginx-proxy
+  docker:
+    name: nginx-proxy_1
+    image: jwilder/nginx-proxy:latest
+    state: started
+    restart_policy: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/nginx/certs:/etc/nginx/certs:ro
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+- name: letsencrypt-nginx-proxy-companion
+  docker:
+    name: letsencrypt-nginx-proxy-companion_1
+    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    state: restarted
+    restart_policy: always
+    volumes_from:
+      - nginx-proxy_1
+    volumes:
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    env:
+      DEBUG: "true"
+
+- name: Creates mosquitto conf.d directory
+  file: path=/srv/mqtt/config/conf.d state=directory recurse=yes
+
+- name: Create the mosquitto config file
+  copy: src=mosquitto.conf dest=/srv/mqtt/config/mosquitto.conf
+
+- name: Create the websockets config file
+  copy: src=websockets.conf dest=/srv/mqtt/config/conf.d/websockets.conf
+
+- name: Create the tls config file
+  template: src=tls.conf.j2 dest=/srv/mqtt/config/conf.d/tls.conf
+
+- name: mosquitto
+  docker:
+    name: mosquitto_1
+    image: toke/mosquitto:latest
+    state: reloaded
+    restart_policy: always
+    expose:
+      - 8883
+      - 9001
+    ports:
+      - "8883:8883"
+    volumes:
+      - /etc/nginx/certs:/etc/nginx/certs:ro
+      - /srv/mqtt/config:/mqtt/config:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    env:
+      VIRTUAL_HOST: "{{ mosquitto_hostname }}"
+      VIRTUAL_PORT: "9001"
+      LETSENCRYPT_HOST: "{{ mosquitto_hostname }}"
+      LETSENCRYPT_EMAIL: "mark@wolfe.id.au"
+
+- name: grafana
+  docker:
+    name: grafana_1
+    image: grafana/grafana:latest
+    state: reloaded
+    restart_policy: always
+    expose:
+      - 3000
+    volumes:
+      - /srv/grafana:/var/lib/grafana
+    env:
+      VIRTUAL_HOST: "{{ grafana_hostname }}"
+      VIRTUAL_PORT: "3000"
+      LETSENCRYPT_HOST: "{{ grafana_hostname }}"
+      LETSENCRYPT_EMAIL: "mark@wolfe.id.au"
+      GF_SERVER_ROOT_URL: "https://{{ grafana_hostname }}"
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_pass }}"
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_GITHUB_ENABLED: true
+      GF_AUTH_GITHUB_CLIENT_ID: "{{ github_client_id }}"
+      GF_AUTH_GITHUB_CLIENT_SECRET: "{{ github_client_secret }}"
+      GF_AUTH_GITHUB_SCOPES: "user:email,read:org"
+      GF_AUTH_GITHUB_TEAM_IDS: "1910678"
+      GF_AUTH_GITHUB_ALLOW_SIGN_UP: true
+
+- name: Creates mqforward conf.d directory
+  file: path=/srv/mqforward/config state=directory recurse=yes
+
+- name: Create the mqforward config file
+  template: src=mqforward.ini.j2 dest=/srv/mqforward/config/mqforward.ini
+
+- name: mqforward
+  docker:
+    name: mqforward_1
+    image: wolfeidau/mqforward:latest
+    state: reloaded
+    pull: always
+    restart_policy: always
+    volumes:
+      - /srv/mqforward/config:/etc/mqforward:ro
+    links:
+      - "mosquitto_1:mosquitto"
+      - "influxdb_1:influxdb"

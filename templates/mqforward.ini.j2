@@ -1,0 +1,13 @@
+[mqforward-mqtt]
+hostname= {{ mosquitto_hostname }}
+port = 8883
+username= ""
+password= ""
+topic = #
+
+[mqforward-influxdb]
+hostname = influxdb
+port = 8086
+db = iotdb
+username = root
+password = {{ influxdb_pass }}

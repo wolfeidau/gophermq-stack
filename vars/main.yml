@@ -1,0 +1,12 @@
+---
+# vars file for gophermq-stack
+ubuntu_ops_packages:
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - logwatch
+ufw_open_tcp_ports:
+  - 22
+  - 80
+  - 443
+  - 8883
